@@ -13,5 +13,9 @@
       "js": ["lib/p5.min.js", "lib/p5.dom.min.js", "data/genre.js", "content_script.js" ]
     }
   ],
+  "options_ui":{
+    "page": "options.html",
+    "open_in_tab": false
+  },
   "web_accessible_resources": ["module.html"]
 }

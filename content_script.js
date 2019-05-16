@@ -59,7 +59,6 @@ function draw(){
 }
 
 function mouseClickedInCanvas(){
- chrome.storage.local.clear(); // for development purpose only.
 }
 
 function mousePressedInCanvas(){
