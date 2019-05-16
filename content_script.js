@@ -4,6 +4,7 @@ let range;
 let loadingCount = 0;
 
 function setup(){
+  loadModule();
   p5canvas = createCanvas(730, 730);
   p5canvas.mouseReleased(mouseReleasedInCanvas);
   p5canvas.mouseClicked(mouseClickedInCanvas);
@@ -23,7 +24,6 @@ function setup(){
 }
 
 function draw(){
-  loadModule();
   background(255);
   stroke(245, 222, 179);
   strokeWeight(3);
@@ -59,7 +59,7 @@ function draw(){
 }
 
 function mouseClickedInCanvas(){
-//  mx = null;
+ chrome.storage.local.clear(); // for development purpose only.
 }
 
 function mousePressedInCanvas(){
@@ -143,24 +143,52 @@ var records = {};
 // <th class="rst-catlst__cat1" rowspan="2"><a href="/rstLst/RC13/">焼肉・ホルモン</a></th>
 // <dt class="list-balloon__table-title"><a href="https://tabelog.com/hyogo/C28102/rstLst/RC/">レストラン</a></dt>
 // <th class="rst-catlst__cat1" rowspan="13"><a href="/rstLst/washoku/">和食</a></th>
-function getGenreUrls(){
-  var titles = document.querySelectorAll(".list-balloon__table-title > a");
-  var urls = [];
-  titles.forEach(a => urls.push(a.getAttribute("href")));
-  return urls;
-}
+// function getGenreUrls(){
+//   var titles = document.querySelectorAll(".list-balloon__table-title > a");
+//   var urls = [];
+//   titles.forEach(a => urls.push(a.getAttribute("href")));
+//   return urls;
+// }
 
 function hyperFetch(){
-  var baseURL = location.href.endsWith("/") ? location.href.substr(0, location.href.length - 1): location.href;
-  var xhr = new XMLHttpRequest();
-  xhr.responseType = "document";
-  xhr.onload = function(){
-    var titles = xhr.response.querySelectorAll(".rst-catlst__cat2 a");
-    loadingCount = titles.length;
-    titles.forEach(a => fetch(baseURL + a.getAttribute("href")));
-  };
-  xhr.open("GET", "https://tabelog.com/cat_lst/");
-  xhr.send();
+//  var baseURL = location.href.endsWith("/") ? location.href.substr(0, location.href.length - 1): location.href;
+  const baseUrl = getBaseUrl();
+  chrome.storage.local.get(baseUrl, results => {
+    if(results[baseUrl]){
+      console.log(baseUrl + " loading from cache.");
+      loadRecords(results[baseUrl]);
+    }
+    else{
+      console.log(baseUrl + " is not cached. Start fetching.")
+      var xhr = new XMLHttpRequest();
+      xhr.responseType = "document";
+      xhr.onload = function(){
+        var titles = xhr.response.querySelectorAll(".rst-catlst__cat2 a");
+        loadingCount = titles.length;
+        titles.forEach(a => fetch(baseUrl + a.getAttribute("href")));
+      };
+      xhr.open("GET", "https://tabelog.com/cat_lst/");
+      xhr.send();
+    }
+  });
+}
+
+function getBaseUrl(){
+  const url = new URL(location.href);
+  if(url.search){
+    var result = [ url.origin ];
+    result.push(url.searchParams.get('pal'));
+    result.push(url.searchParams.get('LstPrf'));
+    result = result.filter(s => s);
+    if(result.length > 1) return result.join('/');
+  }
+  if(url.pathname.endsWith('/rstLst/')){
+    return url.origin + url.pathname.slice(0, -8);
+  }
+  else if(url.pathname.endsWith('/')){
+    return url.origin + url.pathname.slice(0, -1);
+  }
+  else return url.origin + url.pathname;
 }
 
 function fetch(url){
@@ -168,15 +196,37 @@ function fetch(url){
   xhr.responseType = "document"
   xhr.onload = function(){
     console.log("Successfully fetched:" + url);
-    loadingCount--;
     var results = xhr.response.querySelectorAll("li.list-rst");
     results.forEach(r => {
-      const k = r.getAttribute("data-detail-url");
+      const k = new URL(r.getAttribute("data-detail-url")).pathname;
       records[k] = r;
     });
+    loadingCount--;
+    if(loadingCount == 0) storeRecords();
   };
   xhr.open("GET", url);
   xhr.send();
+}
+
+function loadRecords(keys){
+  chrome.storage.local.get(keys, htmls => {
+    console.log(keys);
+    console.log(htmls);
+    keys.forEach(k => {
+      const t = document.createElement('template');
+      t.innerHTML = htmls[k].trim();
+      records[k] = t.content.firstChild;
+    })
+  });
+}
+
+function storeRecords(){
+  const baseUrl = getBaseUrl();
+  const urls =  Object.keys(records);
+  chrome.storage.local.set({ [baseUrl]: urls });
+  const elements = urls.reduce((o, k) => { o[k] = records[k].outerHTML; return o; }, {}); // TODO: 圧縮
+  console.log(JSON.stringify(elements).length);
+  chrome.storage.local.set(elements);
 }
 
 // <span class="list-rst__area-genre cpy-area-genre"> 王子公園駅 401m / 沖縄料理、鳥料理、居酒屋</span>
@@ -210,9 +260,3 @@ function replaceResults(es){
     target.appendChild(e);
   });
 }
-
-// 使用法1: 前もって各ジャンルのレストラン情報を読み込んでおく
-// getGenreUrls().forEach(url => { fetch(url) });
-
-// 使用法2: ジャンルを指定してそのジャンルの情報を表示
-//replaceResults(getRecordsByGenreName("居酒屋"));
