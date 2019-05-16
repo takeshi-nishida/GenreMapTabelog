@@ -209,11 +209,9 @@ function fetch(url){
 
 function loadRecords(keys){
   chrome.storage.local.get(keys, htmls => {
-    console.log(keys);
-    console.log(htmls);
     keys.forEach(k => {
       const t = document.createElement('template');
-      t.innerHTML = htmls[k].trim();
+      t.innerHTML = LZString.decompressFromUTF16(htmls[k]).trim();
       records[k] = t.content.firstChild;
     })
   });
@@ -223,8 +221,7 @@ function storeRecords(){
   const baseUrl = getBaseUrl();
   const urls =  Object.keys(records);
   chrome.storage.local.set({ [baseUrl]: urls });
-  const elements = urls.reduce((o, k) => { o[k] = records[k].outerHTML; return o; }, {}); // TODO: 圧縮
-  console.log(JSON.stringify(elements).length);
+  const elements = urls.reduce((o, k) => { o[k] = LZString.compressToUTF16(records[k].outerHTML); return o; }, {});
   chrome.storage.local.set(elements);
 }
 
