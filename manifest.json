@@ -3,11 +3,19 @@
   "description": "Add GenreMap Interface to tabelog.com",
   "version": "0.2",
   "manifest_version": 2,
+  "permissions": [
+    "storage",
+    "unlimitedStorage"
+  ],
   "content_scripts": [
     {
       "matches": ["https://tabelog.com/*"],
-      "js": ["lib/p5.min.js", "lib/p5.dom.min.js", "data/genre.js", "content_script.js" ]
+      "js": ["lib/p5.min.js", "lib/p5.dom.min.js", "lib/lz-string.min.js", "data/genre.js", "content_script.js" ]
     }
-],
+  ],
+  "options_ui":{
+    "page": "options.html",
+    "open_in_tab": false
+  },
   "web_accessible_resources": ["module.html"]
 }
