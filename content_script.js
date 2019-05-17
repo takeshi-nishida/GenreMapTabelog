@@ -10,17 +10,7 @@ function setup(){
   p5canvas.mouseClicked(mouseClickedInCanvas);
   p5canvas.mousePressed(mousePressedInCanvas);
 
-  let ranks = document.querySelectorAll(".areatop-top3");
-  for(let i = 0; i < ranks.length; i++){
-    let e = ranks[i];
-    e.parentNode.removeChild(e);
-  }
-
-  let side = document.querySelectorAll("#js-leftnavi-genre-trigger.list-sidebar__balloon-trigger");
-  for(let i = 0; i < side.length; i++){
-    let e = side[i];
-    e.parentNode.removeChild(e);
-  }
+  document.querySelector("#js-leftnavi-genre-trigger").parentNode.style.display = 'none';
 }
 
 function draw(){
