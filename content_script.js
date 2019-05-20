@@ -10,7 +10,7 @@ function setup(){
   p5canvas.mouseClicked(mouseClickedInCanvas);
   p5canvas.mousePressed(mousePressedInCanvas);
 
-  document.querySelector("#js-leftnavi-genre-trigger").parentNode.style.display = 'none';
+  document.getElementById('js-leftnavi-genre-trigger').parentNode.style.display = 'none';
 }
 
 function draw(){
@@ -79,9 +79,8 @@ function mouseReleasedInCanvas(){
   }
   console.log(ok);
   if(ok.length > 0){
-    const rs = getRecordsByGenreName(ok);
-    sortRecords(rs);
-    replaceResults(rs.slice(0, 20)); // 上位20件を表示
+    genreFilter = createGenreNameFilter(ok);
+    updateList();
   }
 }
 
@@ -124,23 +123,12 @@ function loadFileToElement(element, url, callback){
 
 
 // ----------------------------------------------------------------------------
-// Loading genre
+// Fetch records from Tabelog server
 // ----------------------------------------------------------------------------
 
-var records = {};
-
-// <th class="rst-catlst__cat1" rowspan="2"><a href="/rstLst/RC13/">焼肉・ホルモン</a></th>
-// <dt class="list-balloon__table-title"><a href="https://tabelog.com/hyogo/C28102/rstLst/RC/">レストラン</a></dt>
-// <th class="rst-catlst__cat1" rowspan="13"><a href="/rstLst/washoku/">和食</a></th>
-// function getGenreUrls(){
-//   var titles = document.querySelectorAll(".list-balloon__table-title > a");
-//   var urls = [];
-//   titles.forEach(a => urls.push(a.getAttribute("href")));
-//   return urls;
-// }
+let records = {};
 
 function hyperFetch(){
-//  var baseURL = location.href.endsWith("/") ? location.href.substr(0, location.href.length - 1): location.href;
   const baseUrl = getBaseUrl();
   chrome.storage.local.get(baseUrl, results => {
     if(results[baseUrl]){
@@ -191,11 +179,18 @@ function fetch(url){
       records[k] = r;
     });
     loadingCount--;
-    if(loadingCount == 0) storeRecords();
+    if(loadingCount == 0){
+      applyBudgetFilter();
+      storeRecords();
+    }
   };
   xhr.open("GET", url);
   xhr.send();
 }
+
+// ----------------------------------------------------------------------------
+// Load/store records from/to cache
+// ----------------------------------------------------------------------------
 
 function loadRecords(keys){
   chrome.storage.local.get(keys, htmls => {
@@ -203,7 +198,8 @@ function loadRecords(keys){
       const t = document.createElement('template');
       t.innerHTML = LZString.decompressFromUTF16(htmls[k]).trim();
       records[k] = t.content.firstChild;
-    })
+    });
+    applyBudgetFilter();
   });
 }
 
@@ -215,12 +211,23 @@ function storeRecords(){
   chrome.storage.local.set(elements);
 }
 
-// <span class="list-rst__area-genre cpy-area-genre"> 王子公園駅 401m / 沖縄料理、鳥料理、居酒屋</span>
-function getRecordsByGenreName(names){
-  return Object.values(records).filter(r => {
-    var genreText = r.querySelector("span.list-rst__area-genre").innerText;
-    return typeof genreText == "string" && names.some(name => genreText.indexOf(name) >= 0);
-  });
+// ----------------------------------------------------------------------------
+// Update List
+// ----------------------------------------------------------------------------
+
+let recordsWithinBudget = [];
+let genreFilter = r => true;
+let budgetFilter = r => true;
+
+function applyBudgetFilter(){
+  recordsWithinBudget = Object.values(records).filter(budgetFilter);
+  updateList();
+}
+
+function updateList(){
+  const rs = recordsWithinBudget.filter(genreFilter);
+  sortRecords(rs);
+  replaceResults(rs.slice(0, 20)); // 上位20件を表示
 }
 
 function sortRecords(rs){
@@ -245,4 +252,52 @@ function replaceResults(es){
     }
     target.appendChild(e);
   });
+}
+
+// ----------------------------------------------------------------------------
+// Genre filter
+// ----------------------------------------------------------------------------
+
+// <span class="list-rst__area-genre cpy-area-genre"> 王子公園駅 401m / 沖縄料理、鳥料理、居酒屋</span>
+function createGenreNameFilter(names){
+  return names.length > 0 ? r => {
+    const genreText = r.querySelector("span.list-rst__area-genre").innerText;
+    return typeof genreText == "string" && names.some(name => genreText.indexOf(name) >= 0);
+  } : r => true;
+}
+
+// ----------------------------------------------------------------------------
+// Budget filter
+// ----------------------------------------------------------------------------
+const budgets = [null, 1000, 2000, 3000, 4000, 5000, 6000, 8000, 10000, 15000, 20000, 30000];
+const radio = document.getElementById('js-simple-form-sidebar').RdoCosTp;
+const minBudgetSelect = document.getElementById('lstcos-sidebar');
+const maxBudgetSelect = document.getElementById('lstcost-sidebar');
+
+document.getElementById('RdoCosTp_1_sidebar').addEventListener('change', budgetChanged);
+document.getElementById('RdoCosTp_2_sidebar').addEventListener('change', budgetChanged);
+minBudgetSelect.addEventListener('change', budgetChanged);
+maxBudgetSelect.addEventListener('change', budgetChanged);
+
+function getTiming(){ return radio.value; } // 2 = dinner, 1 = lunch
+function getMinBudget(){ return budgets[minBudgetSelect.value] }
+function getMaxBudget(){ return budgets[maxBudgetSelect.value] }
+
+function budgetChanged(e){
+  budgetFilter = createBudgetFilter();
+  applyBudgetFilter();
+}
+
+// <span class="c-rating__val list-rst__budget-val cpy-dinner-budget-val">￥3,000～￥3,999</span>
+// <span class="c-rating__val list-rst__budget-val cpy-lunch-budget-val">￥1,000～￥1,999</span>
+function createBudgetFilter(){
+  const min = getMinBudget();
+  const max = getMaxBudget();
+  if(!min && !max) return r => true;
+  return r => {
+    const text = r.querySelector(getTiming() == 1 ? '.cpy-lunch-budget-val' : '.cpy-dinner-budget-val').innerText.trim();
+    if(text == '-') return false;
+    const [rmin, rmax] = text.replace(/[￥,]/g, '').split('～');
+    return (!min || min < rmin) && (!max || max > rmax);
+  }
 }
