@@ -28,14 +28,13 @@ function draw(){
 
   for(let i = 0; i < genres.length; i++){
     const g = genres[i];
+    if(!count[g.name]) continue;
     const x = map(g.weight, 1, 5, 0, width);
     const y = map(g.speed, 5, 1, 0, height);
     noStroke();
-    if(mx <= x && x <= dx && my <= y && y <= dy){
-      fill(255,0,0);
-    }else{
-      fill(0);
-    }
+    if(mx <= x && x <= dx && my <= y && y <= dy) fill(255,0,0);
+    else if(count[g.name] < 3) fill(192);
+    else fill(0);
     text(g.name, x, y);
   }
 
@@ -218,10 +217,12 @@ function storeRecords(){
 let recordsWithinBudget = [];
 let genreFilter = r => true;
 let budgetFilter = r => true;
+const count = {};
 
 function applyBudgetFilter(){
   recordsWithinBudget = Object.values(records).filter(budgetFilter);
   updateList();
+  updateCount();
 }
 
 function updateList(){
@@ -251,6 +252,13 @@ function replaceResults(es){
       calendar.parentNode.removeChild(calendar);
     }
     target.appendChild(e);
+  });
+}
+
+function updateCount(){
+  const genreTexts = recordsWithinBudget.map(r => r.querySelector("span.list-rst__area-genre").innerText);
+  genres.forEach(g => {
+    count[g.name] = genreTexts.filter(t => (typeof t == "string" && t.indexOf(g.name) >= 0)).length;
   });
 }
 
