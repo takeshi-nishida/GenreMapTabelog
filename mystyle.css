@@ -1,0 +1,7 @@
+.areatop-top3,
+#js-simple-form-sidebar > .list-sidebar > :not(:nth-child(-n+2)),
+#js-simple-form-sidebar > :last-child,
+#column-side > :nth-last-child(-n+4)
+{
+  display: none !important;
+}
