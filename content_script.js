@@ -172,7 +172,7 @@ function fetch(url){
   xhr.responseType = "document"
   xhr.onload = function(){
     console.log("Successfully fetched:" + url);
-    var results = xhr.response.querySelectorAll("li.list-rst");
+    var results = xhr.response.querySelectorAll(".list-rst");
     results.forEach(r => {
       const k = new URL(r.getAttribute("data-detail-url")).pathname;
       records[k] = r;
@@ -241,7 +241,7 @@ function getRating(record){
 }
 
 function replaceResults(es){
-  var target = document.querySelector("ul.rstlist-info");
+  const target = document.querySelector(".rstlist-info");
   target.innerHTML = "";
   es.forEach(e => {
     e.querySelectorAll("img").forEach(i => {
@@ -256,7 +256,7 @@ function replaceResults(es){
 }
 
 function updateCount(){
-  const genreTexts = recordsWithinBudget.map(r => r.querySelector("span.list-rst__area-genre").innerText);
+  const genreTexts = recordsWithinBudget.map(r => r.querySelector(".list-rst__area-genre").innerText);
   genres.forEach(g => {
     count[g.name] = genreTexts.filter(t => (typeof t == "string" && t.indexOf(g.name) >= 0)).length;
   });
@@ -269,7 +269,7 @@ function updateCount(){
 // <span class="list-rst__area-genre cpy-area-genre"> 王子公園駅 401m / 沖縄料理、鳥料理、居酒屋</span>
 function createGenreNameFilter(names){
   return names.length > 0 ? r => {
-    const genreText = r.querySelector("span.list-rst__area-genre").innerText;
+    const genreText = r.querySelector(".list-rst__area-genre").innerText;
     return typeof genreText == "string" && names.some(name => genreText.indexOf(name) >= 0);
   } : r => true;
 }
