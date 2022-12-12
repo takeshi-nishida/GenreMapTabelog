@@ -174,8 +174,11 @@ function fetch(url){
     console.log("Successfully fetched:" + url);
     var results = xhr.response.querySelectorAll(".list-rst");
     results.forEach(r => {
-      const k = new URL(r.getAttribute("data-detail-url")).pathname;
-      records[k] = r;
+      const url = r.getAttribute("data-detail-url");
+      if (url) {
+        const k = new URL(url).pathname;
+        records[k] = r;
+      }
     });
     loadingCount--;
     if(loadingCount == 0){
@@ -245,7 +248,7 @@ function replaceResults(es){
   target.innerHTML = "";
   es.forEach(e => {
     e.querySelectorAll("img").forEach(i => {
-      i.setAttribute("src", i.getAttribute("data-original"))
+      i.setAttribute("src", i.getAttribute("data-lazy"))
     });
     var calendar = e.querySelector(".list-rst__calendar");
     if(calendar){
